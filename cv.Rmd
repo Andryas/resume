@@ -1,6 +1,6 @@
 ---
-title: "Dennis Leão CV"
-author: Dennis Santos Leão
+title: Andryas Wavrzenczak
+author: Andryas Wavrzenczak
 date: "`r Sys.Date()`"
 params:
   pdf_mode:
@@ -24,15 +24,17 @@ source("CV_printing_functions.R")
 
 # Read in all data and initialize a CV printer object
 # CV <- create_CV_object(
-#   data_location = "https://docs.google.com/spreadsheets/d/14MQICF2F8-vf8CKPF1m4lyGKO6_thG-4aSwat1e2TWc",  
+#   # data_location = "https://docs.google.com/spreadsheets/d/14MQICF2F8-vf8CKPF1m4lyGKO6_thG-4aSwat1e2TWc",  
+#   data_location = "https://docs.google.com/spreadsheets/d/1U-DhHmE3SRtBwbCgBK1T1h1kF5fXgoopx5U29Yc_vGs/edit?usp=sharing",  
 #   pdf_mode = params$pdf_mode,
 #   cache_data = params$cache_data
 # )
 
-CV <- readr::read_rds('cached_positions.rds')
+
+CV <- create_csv_object()
+# CV <- readr::read_rds('cached_positions.rds')
 
 ```
-
 
 ```{r}
 # When in pdf export mode the little dots are unaligned, so fix that with some conditional CSS.
@@ -53,16 +55,16 @@ Aside
 ```{r}
 # Build interactive network of positions colored by section
 # and connected if they occurred in the same year
-datadrivencv::build_network_logo(CV$entries_data)
+# datadrivencv::build_network_logo(CV$entries_data)
 ```
 
 
 ```{r}
-if(params$pdf_mode){
-  cat("View this CV online with links at https://github.com/leaodennis")
-} else {
-  cat("[<i class='fas fa-download'></i> Download a PDF of this CV](https://github.com/leaodennis/resume/blob/main/dennis_cv.pdf)")
-}
+# if(params$pdf_mode){
+#   cat("View this CV online with links at https://github.com/andryas")
+# } else {
+#   cat("[<i class='fas fa-download'></i> Download a PDF of this CV](https://github.com/leaodennis/resume/blob/main/dennis_cv.pdf)")
+# }
 ```
 
 Contact {#contact}
@@ -73,7 +75,6 @@ CV %>% print_contact_info()
 ```
 
 
-
 Language Skills {#skills}
 --------------------------------------------------------------------------------
 
@@ -82,18 +83,16 @@ CV %>% print_skill_bars()
 ```
 
 
-
 Disclaimer {#disclaimer}
 --------------------------------------------------------------------------------
 
 Last updated on `r Sys.Date()`.
 
 
-
 Main
 ================================================================================
 
-Dennis S. Leão {#title}
+Andryas Wavrzenczak {#title}
 --------------------------------------------------------------------------------
 
 ```{r}
@@ -117,10 +116,6 @@ Industry Experience {data-icon=suitcase}
 ```{r}
 CV %<>% print_section('industry_positions')
 ```
-
-
-
-
 
 <!-- These breaks just force a new page so section doesnt get cut off -->
 <br>

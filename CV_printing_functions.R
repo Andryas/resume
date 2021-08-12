@@ -18,28 +18,28 @@
 #'   sheets. This is also nice when you have non-public sheets that don't play
 #'   nice with authentication during the knit process.
 #' @return A new `CV_Printer` object.
-create_CV_object <-  function(data_location,
-                              pdf_mode = FALSE,
-                              sheet_is_publicly_readable = TRUE,
-                              cache_data = TRUE) {
-
-  cv <- list(
-    pdf_mode = pdf_mode,
-    links = c(),
-    cache_data = cache_data
-  ) %>%
-    load_data(data_location, sheet_is_publicly_readable)
-
-
-  extract_year <- function(dates){
+create_csv_object <- function(pdf_mode = FALSE, cache_data = FALSE) {
+  suppressWarnings(
+    {
+      cv <- list(
+        pdf_mode = pdf_mode,
+        links = c(),
+        cache_data = cache_data,
+        entries_data = read.csv("data_location/entries.csv", skip = 1),
+        text_blocks = read.csv("data_location/text_blocks.csv", skip = 1),
+        contact_info = read.csv("data_location/contact_info.csv", skip = 1),
+        skills = read.csv("data_location/language_skills.csv", skip = 1)
+      )
+    }
+  )
+  extract_year <- function(dates) {
     date_year <- stringr::str_extract(dates, "(20|19)[0-9]{2}")
     date_year[is.na(date_year)] <- lubridate::year(lubridate::ymd(Sys.Date())) + 10
 
     date_year
   }
 
-  parse_dates <- function(dates){
-
+  parse_dates <- function(dates) {
     date_month <- stringr::str_extract(dates, "(\\w+|\\d+)(?=(\\s|\\/|-)(20|19)[0-9]{2})")
     date_month[is.na(date_month)] <- "1"
 
@@ -50,7 +50,7 @@ create_CV_object <-  function(data_location,
   # Clean up entries dataframe to format we need it for printing
   cv$entries_data %<>%
     tidyr::unite(
-      tidyr::starts_with('description'),
+      tidyr::starts_with("description"),
       col = "description_bullets",
       sep = "\n- ",
       na.rm = TRUE
@@ -66,72 +66,17 @@ create_CV_object <-  function(data_location,
       no_end = is.na(end),
       has_end = !no_end,
       timeline = dplyr::case_when(
-        no_start  & no_end  ~ "N/A",
-        no_start  & has_end ~ as.character(end),
-        has_start & no_end  ~ paste("Current", "-", start),
-        TRUE                ~ paste(end, "-", start)
+        no_start & no_end ~ "N/A",
+        no_start & has_end ~ as.character(end),
+        has_start & no_end ~ paste("Current", "-", start),
+        TRUE ~ paste(end, "-", start)
       )
     ) %>%
     dplyr::arrange(desc(parse_dates(end))) %>%
-    dplyr::mutate_all(~ ifelse(is.na(.), 'N/A', .))
+    dplyr::mutate_all(~ ifelse(is.na(.), "N/A", .))
 
-  cv
+    cv
 }
-
-# Load data for CV
-load_data <- function(cv, data_location, sheet_is_publicly_readable){
-  cache_loc <- "ddcv_cache.rds"
-  has_cached_data <- fs::file_exists(cache_loc)
-  is_google_sheets_location <- stringr::str_detect(data_location, "docs\\.google\\.com")
-
-  if(has_cached_data & cv$cache_data){
-
-    cv <- c(cv, readr::read_rds(cache_loc))
-  } else if(is_google_sheets_location){
-    if(sheet_is_publicly_readable){
-      # This tells google sheets to not try and authenticate. Note that this will only
-      # work if your sheet has sharing set to "anyone with link can view"
-      googlesheets4::sheets_deauth()
-    } else {
-      # My info is in a public sheet so there's no need to do authentication but if you want
-      # to use a private sheet, then this is the way you need to do it.
-      # designate project-specific cache so we can render Rmd without problems
-      options(gargle_oauth_cache = ".secrets")
-    }
-
-    read_gsheet <- function(sheet_id){
-      googlesheets4::read_sheet(data_location, sheet = sheet_id, skip = 1, col_types = "c")
-    }
-    cv$entries_data  <- read_gsheet(sheet_id = "entries")
-    cv$skills        <- read_gsheet(sheet_id = "language_skills")
-    cv$text_blocks   <- read_gsheet(sheet_id = "text_blocks")
-    cv$contact_info  <- read_gsheet(sheet_id = "contact_info")
-  } else {
-    # Want to go old-school with csvs?
-    cv$entries_data <- readr::read_csv(paste0(data_location, "entries.csv"), skip = 1)
-    cv$skills       <- readr::read_csv(paste0(data_location, "language_skills.csv"), skip = 1)
-    cv$text_blocks  <- readr::read_csv(paste0(data_location, "text_blocks.csv"), skip = 1)
-    cv$contact_info <- readr::read_csv(paste0(data_location, "contact_info.csv"), skip = 1)
-  }
-
-  if(cv$cache_data & !has_cached_data){
-    # Make sure we only cache the data and not settings etc.
-    readr::write_rds(
-      list(
-        entries_data = cv$entries_data,
-        skills = cv$skills,
-        text_blocks = cv$text_blocks,
-        contact_info = cv$contact_info
-      ),
-      cache_loc
-    )
-
-    cat(glue::glue("CV data is cached at {cache_loc}.\n"))
-  }
-
-  invisible(cv)
-}
-
 
 # Remove links from a text block and add to internal list
 sanitize_links <- function(cv, text){
@@ -165,30 +110,30 @@ sanitize_links <- function(cv, text){
 
 #' @description Take a position data frame and the section id desired and prints the section to markdown.
 #' @param section_id ID of the entries section to be printed as encoded by the `section` column of the `entries` table
-print_section <- function(cv, section_id, glue_template = "default"){
+print_section <- function(cv, section_id, glue_template = "default") {
+  if (glue_template == "default") {
+    glue_template <- paste0("
+      ### {title}
 
-  if(glue_template == "default"){
-    glue_template <- "
-### {title}
+      {loc}
 
-{loc}
+      {institution}
 
-{institution}
+      {timeline}
 
-{timeline}
-
-{description_bullets}
-\n\n\n"
+      {description_bullets}
+      \n\n\n")
   }
 
   section_data <- dplyr::filter(cv$entries_data, section == section_id)
+  # section_data <- dplyr::filter(cv$entries_data, section == "industry_positions")
 
   # Take entire entries data frame and removes the links in descending order
   # so links for the same position are right next to each other in number.
-  for(i in 1:nrow(section_data)){
-    for(col in c('title', 'description_bullets')){
+  for (i in 1:nrow(section_data)) {
+    for (col in c("title", "description_bullets")) {
       strip_res <- sanitize_links(cv, section_data[i, col])
-      section_data[i, col] <- strip_res$text
+      section_data[i, col] <- stringr::str_replace_all(strip_res$text, "- \\n-|\n- $", "")
       cv <- strip_res$cv
     }
   }
@@ -218,6 +163,10 @@ print_text_block <- function(cv, label){
 #' @description Construct a bar chart of skills
 #' @param out_of The relative maximum for skills. Used to set what a fully filled in skill bar is.
 print_skill_bars <- function(cv, out_of = 5, bar_color = "#969696", bar_background = "#d9d9d9", glue_template = "default"){
+  
+  cv$skills <- cv$skills %>%
+    mutate(level = as.numeric(level)) %>% 
+    arrange(desc(level))
 
   if(glue_template == "default"){
     glue_template <- "

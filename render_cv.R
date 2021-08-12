@@ -10,26 +10,20 @@
 
 library(tidyverse)
 source("CV_printing_functions.R")
-cv_data <- create_CV_object(
-  data_location = "/home/dennis/resume/data_location/",
-  cache_data = FALSE
-)
+# cv_data <- create_CV_object(
+#   data_location = "/home/andryaswaurzenczak/Documents/github/resume",
+#   cache_data = FALSE
+# )
 
-readr::write_rds(cv_data, 'cached_positions.rds')
+# readr::write_rds(cv_data, 'cached_positions.rds')
 cache_data <- FALSE
 
 # Knit the HTML version
-rmarkdown::render("cv.Rmd",
-                  params = list(pdf_mode = FALSE, cache_data = cache_data),
-                  output_file = "dennis_cv.html")
-
+rmarkdown::render("cv.Rmd", params = list(pdf_mode = FALSE, cache_data = cache_data), output_file = "andryas_cv.html")
 
 # Knit the PDF version to temporary html location
 tmp_html_cv_loc <- fs::file_temp(ext = ".html")
-rmarkdown::render("cv.Rmd",
-                  params = list(pdf_mode = TRUE, cache_data = cache_data),
-                  output_file = tmp_html_cv_loc)
+rmarkdown::render("cv.Rmd", params = list(pdf_mode = TRUE, cache_data = cache_data), output_file = tmp_html_cv_loc)
 
 # Convert to PDF using Pagedown
-pagedown::chrome_print(input = tmp_html_cv_loc,
-                       output = "dennis_cv.pdf")
+pagedown::chrome_print(input = tmp_html_cv_loc, output = "andryas_cv.pdf")
